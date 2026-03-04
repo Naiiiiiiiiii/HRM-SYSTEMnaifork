@@ -18,18 +18,16 @@ public class DepartmentPanel extends JPanel {
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
-
     private JTextField txtSearch;
     private JComboBox<String> cboFilter;
 
-    // Buttons cần phân quyền
     private JButton btnThem;
 
     public DepartmentPanel() {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // ── PANEL TRÊN: Tiêu đề + Tìm kiếm + Lọc
+        // ── PANEL TRÊN
         JPanel topPanel = new JPanel(new BorderLayout());
 
         JLabel title = new JLabel("QUẢN LÝ PHÒNG BAN");
@@ -60,9 +58,7 @@ public class DepartmentPanel extends JPanel {
         searchFilterPanel.add(txtSearch);
         searchFilterPanel.add(lblFilter);
         searchFilterPanel.add(cboFilter);
-
         topPanel.add(searchFilterPanel, BorderLayout.CENTER);
-
         add(topPanel, BorderLayout.NORTH);
 
         // ── BẢNG
@@ -72,20 +68,16 @@ public class DepartmentPanel extends JPanel {
                 return false;
             }
         };
-
         table = new JTable(tableModel);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(24);
-
         table.getColumnModel().getColumn(0).setPreferredWidth(70);
         table.getColumnModel().getColumn(1).setPreferredWidth(180);
         table.getColumnModel().getColumn(2).setPreferredWidth(160);
         table.getColumnModel().getColumn(3).setPreferredWidth(100);
 
-        // Thêm sorter để có thể filter
         sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
-
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // ── THANH NÚT
@@ -101,11 +93,8 @@ public class DepartmentPanel extends JPanel {
         // ── SỰ KIỆN
         btnThem.addActionListener(e -> showAddDialog());
 
-        // Tìm kiếm realtime
         txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent e) {
-                applyFilter();
-            }
+            public void keyReleased(java.awt.event.KeyEvent e) { applyFilter(); }
         });
 
         // Lọc theo trạng thái
@@ -121,17 +110,19 @@ public class DepartmentPanel extends JPanel {
         });
 
         refreshTable();
+        cboFilter.addActionListener(e -> applyFilter());
     }
 
     // ── PHÂN QUYỀN
-
     private void setupPermissions() {
         btnThem.setVisible(SessionContext.getInstance().coQuyen("DEPARTMENT_MANAGE"));
     }
 
-    // ── LỌC DỮ LIỆU
+    private boolean isRefreshing = false;
 
+    // ── LỌC DỮ LIỆU
     private void applyFilter() {
+        if (isRefreshing) return; // bo qua neu dang refresh
         String searchText = txtSearch.getText().toLowerCase().trim();
         int statusFilterIndex = cboFilter.getSelectedIndex();
 
@@ -151,17 +142,15 @@ public class DepartmentPanel extends JPanel {
                 } else if (statusFilterIndex == 2) {
                     matchStatus = "ngunghoatdong".equals(trangThai) || "ngung".equals(trangThai);
                 }
-
                 return matchSearch && matchStatus;
             }
         };
-
         sorter.setRowFilter(rf);
     }
 
     // ── LÀM MỚI BẢNG
-
     private void refreshTable() {
+        isRefreshing = true;
         tableModel.setRowCount(0);
         for (PhongBan d : service.getAllDepartments()) {
             String tenCha = "— (goc)";
@@ -179,14 +168,13 @@ public class DepartmentPanel extends JPanel {
                     toTrangThaiDisplay(d.getTrangThai())
             });
         }
-
-        // Reset filter sau khi refresh
         txtSearch.setText("");
         cboFilter.setSelectedIndex(0);
+        sorter.setRowFilter(null); // xoa filter cu
+        isRefreshing = false;
     }
 
     // ── FORM THÊM
-
     private void showAddDialog() {
         JTextField txtMa = new JTextField();
         JTextField txtTen = new JTextField();
@@ -201,13 +189,9 @@ public class DepartmentPanel extends JPanel {
         };
 
         int ok = JOptionPane.showConfirmDialog(this, fields, "Them phong ban moi", JOptionPane.OK_CANCEL_OPTION);
-
-        if (ok != JOptionPane.OK_OPTION) {
-            return;
-        }
+        if (ok != JOptionPane.OK_OPTION) return;
 
         String maCha = getSelectedMa(comboCha, dsActive);
-
         try {
             service.addDepartment(txtMa.getText().trim(), txtTen.getText().trim(), maCha);
             refreshTable();
@@ -315,11 +299,13 @@ public class DepartmentPanel extends JPanel {
 
     private JComboBox<String> buildParentCombo(List<PhongBan> dsActive, String maChaHienTai) {
         String[] items = new String[dsActive.size() + 1];
-        items[0] = "— Khong co (phong ban goc) —";
+        items[0] = "-- Khong co (phong ban goc) --";
+
         int selectedIndex = 0;
 
         for (int i = 0; i < dsActive.size(); i++) {
             items[i + 1] = dsActive.get(i).toString();
+
             if (dsActive.get(i).getId().equals(maChaHienTai)) {
                 selectedIndex = i + 1;
             }
@@ -327,6 +313,7 @@ public class DepartmentPanel extends JPanel {
 
         JComboBox<String> combo = new JComboBox<>(items);
         combo.setSelectedIndex(selectedIndex);
+
         return combo;
     }
 
