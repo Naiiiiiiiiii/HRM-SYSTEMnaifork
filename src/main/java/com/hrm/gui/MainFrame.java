@@ -12,13 +12,13 @@ import com.hrm.util.SessionContext;
 import com.hrm.util.UIColors;
 import com.hrm.gui.admin.DepartmentPanel;
 import com.hrm.gui.admin.PositionPanel;
+import com.hrm.gui.attendance.AttendancePanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import com.hrm.gui.attendance.AttendancePanel;
 
 /**
  * MainFrame - Main application frame with purple theme
