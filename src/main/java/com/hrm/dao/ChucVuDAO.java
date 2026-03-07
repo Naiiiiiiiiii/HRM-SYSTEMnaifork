@@ -153,9 +153,7 @@ public class ChucVuDAO {
         }
     }
 
-    // =====================================================================
     // ==================== Private Helpers ================================
-    // =====================================================================
 
     private ChucVu mapRow(ResultSet rs) throws SQLException {
         return new ChucVu(

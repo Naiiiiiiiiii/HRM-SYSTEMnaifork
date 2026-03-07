@@ -30,10 +30,7 @@ public class LichSuLuongDAO {
         return instance;
     }
 
-    // ====================================================
     // Public API
-    // ====================================================
-
     /**
      * Chèn một bản ghi lịch sử mới vào LICHSU_HESOLUONG.
      * maLichSu được DB tự sinh (AUTO_INCREMENT).

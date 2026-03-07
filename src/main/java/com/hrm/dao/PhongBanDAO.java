@@ -185,9 +185,7 @@ public class PhongBanDAO {
         return false;
     }
 
-    // =====================================================================
     // ==================== Private Helpers ================================
-    // =====================================================================
 
     private PhongBan mapRow(ResultSet rs) throws SQLException {
         return new PhongBan(
