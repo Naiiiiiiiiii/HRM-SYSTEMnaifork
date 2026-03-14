@@ -2,6 +2,7 @@ package com.hrm.bus;
 
 import com.hrm.dao.ChucVuDAO;
 import com.hrm.dao.LichSuLuongDAO;
+import com.hrm.dao.BoNhiemDAO;
 import com.hrm.model.ChucVu;
 import com.hrm.model.LichSuHeSoLuong;
 import com.hrm.util.OrganizationValidation;
@@ -16,6 +17,7 @@ public class ChucVuBUS {
 
     private final ChucVuDAO chucVuDAO = new ChucVuDAO();
     private final LichSuLuongDAO lichSuDAO = LichSuLuongDAO.getInstance();
+    private final BoNhiemDAO boNhiemDAO = BoNhiemDAO.getInstance();
 
     public List<ChucVu> getAllPositions() {
         return chucVuDAO.findAll();
@@ -111,6 +113,9 @@ public class ChucVuBUS {
 
         if ("ngung_hoat_dong".equals(cv.getTrangThai()))
             throw new IllegalArgumentException("Chuc vu nay da ngung hoat dong roi.");
+
+        if (boNhiemDAO.hasActiveBoNhiemByChucVu(ma))
+            throw new IllegalArgumentException("Khong the ngung hoat dong chuc vu vi con nhan vien dang giu chuc vu nay.");
 
         cv.setTrangThai("ngung_hoat_dong");
         chucVuDAO.update(cv);
