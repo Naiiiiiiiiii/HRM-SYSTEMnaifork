@@ -17,7 +17,7 @@ public class PhongBanDAO {
      */
     public List<PhongBan> findAll() {
         List<PhongBan> list = new ArrayList<>();
-        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, trangThai FROM PHONGBAN ORDER BY maPhongBan";
+        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, moTa, trangThai FROM PHONGBAN ORDER BY maPhongBan";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -35,7 +35,7 @@ public class PhongBanDAO {
      * Tìm phòng ban theo mã.
      */
     public PhongBan findById(String maPhongBan) {
-        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, trangThai FROM PHONGBAN WHERE maPhongBan = ?";
+        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, moTa, trangThai FROM PHONGBAN WHERE maPhongBan = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, maPhongBan);
@@ -56,7 +56,7 @@ public class PhongBanDAO {
      */
     public List<PhongBan> findChildren(String maPhongBan) {
         List<PhongBan> list = new ArrayList<>();
-        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, trangThai FROM PHONGBAN WHERE phongBanCha = ?";
+        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, moTa, trangThai FROM PHONGBAN WHERE phongBanCha = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, maPhongBan);
@@ -77,9 +77,9 @@ public class PhongBanDAO {
      */
     public List<PhongBan> findActive() {
         List<PhongBan> list = new ArrayList<>();
-        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, trangThai "
+        String sql = "SELECT maPhongBan, tenPhongBan, phongBanCha, moTa, trangThai "
                 + "FROM PHONGBAN "
-                + "WHERE REPLACE(REPLACE(REPLACE(LOWER(trangThai), '_', ''), ' ', ''), '-', '') = 'hoatdong' "
+                + "WHERE trangThai = 'hoatDong' "
                 + "ORDER BY maPhongBan";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -116,7 +116,7 @@ public class PhongBanDAO {
      * Thêm phòng ban mới vào cơ sở dữ liệu.
      */
     public void save(PhongBan department) {
-        String sql = "INSERT INTO PHONGBAN (maPhongBan, tenPhongBan, phongBanCha, trangThai) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO PHONGBAN (maPhongBan, tenPhongBan, phongBanCha, moTa, trangThai) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, department.getId());
@@ -126,7 +126,8 @@ public class PhongBanDAO {
             } else {
                 ps.setNull(3, Types.VARCHAR);
             }
-            ps.setString(4, department.getTrangThai());
+            ps.setString(4, department.getMoTa());
+            ps.setString(5, department.getTrangThai());
             ps.executeUpdate();
         } catch (SQLException e) {
             System.err.println("Lỗi PhongBanDAO.save: " + e.getMessage());
@@ -138,7 +139,7 @@ public class PhongBanDAO {
      * Cập nhật thông tin phòng ban.
      */
     public void update(PhongBan department) {
-        String sql = "UPDATE PHONGBAN SET tenPhongBan = ?, phongBanCha = ?, trangThai = ? WHERE maPhongBan = ?";
+        String sql = "UPDATE PHONGBAN SET tenPhongBan = ?, phongBanCha = ?, moTa = ?, trangThai = ? WHERE maPhongBan = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, department.getTenPhongBan());
@@ -147,8 +148,9 @@ public class PhongBanDAO {
             } else {
                 ps.setNull(2, Types.VARCHAR);
             }
-            ps.setString(3, department.getTrangThai());
-            ps.setString(4, department.getId());
+            ps.setString(3, department.getMoTa());
+            ps.setString(4, department.getTrangThai());
+            ps.setString(5, department.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             System.err.println("Lỗi PhongBanDAO.update: " + e.getMessage());
@@ -170,7 +172,7 @@ public class PhongBanDAO {
     public boolean hasActiveChildren(String maPhongBan) {
         String sql = "SELECT 1 FROM PHONGBAN "
                 + "WHERE phongBanCha = ? "
-                + "AND REPLACE(REPLACE(REPLACE(LOWER(trangThai), '_', ''), ' ', ''), '-', '') = 'hoatdong' "
+                + "AND trangThai = 'hoatDong' "
                 + "LIMIT 1";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -192,6 +194,7 @@ public class PhongBanDAO {
                 rs.getString("maPhongBan"),
                 rs.getString("tenPhongBan"),
                 rs.getString("phongBanCha"),
+                rs.getString("moTa"),
                 rs.getString("trangThai")
         );
     }

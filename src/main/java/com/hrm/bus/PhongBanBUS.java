@@ -3,145 +3,147 @@ package com.hrm.bus;
 import com.hrm.dao.BoNhiemDAO;
 import com.hrm.dao.PhongBanDAO;
 import com.hrm.model.PhongBan;
+import com.hrm.util.OrganizationValidation;
 
 import java.util.List;
 
-/**
- * Service quan ly phong ban.
- */
 public class PhongBanBUS {
 
-    private final PhongBanDAO repository = new PhongBanDAO();
-    private final BoNhiemDAO boNhiemRepo = BoNhiemDAO.getInstance();
+    private final PhongBanDAO phongBanDAO = new PhongBanDAO();
+    private final BoNhiemDAO boNhiemDAO = BoNhiemDAO.getInstance();
 
     public List<PhongBan> getAllDepartments() {
-        return repository.findAll();
+        return phongBanDAO.findAll();
     }
 
     public List<PhongBan> getActiveDepartments() {
-        return repository.findActive();
+        return phongBanDAO.findActive();
     }
 
-    public PhongBan getById(String maPhongBan) {
-        return repository.findById(maPhongBan);
+    public PhongBan getById(String ma) {
+        return phongBanDAO.findById(ma);
     }
 
-    public void addDepartment(String maPhongBan, String tenPhongBan, String phongBanCha) {
-        if (maPhongBan == null || maPhongBan.trim().isEmpty()) {
-            throw new IllegalArgumentException("\u004d\u00e3\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u006b\u0068\u00f4\u006e\u0067\u0020\u0111\u01b0\u1ee3\u0063\u0020\u0111\u1ec3\u0020\u0074\u0072\u1ed1\u006e\u0067\u002e");
-        }
-        if (tenPhongBan == null || tenPhongBan.trim().isEmpty()) {
-            throw new IllegalArgumentException("\u0054\u00ea\u006e\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u006b\u0068\u00f4\u006e\u0067\u0020\u0111\u01b0\u1ee3\u0063\u0020\u0111\u1ec3\u0020\u0074\u0072\u1ed1\u006e\u0067\u002e");
-        }
-        if (repository.existsById(maPhongBan.trim())) {
-            throw new IllegalArgumentException("\u004d\u00e3\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0027" + maPhongBan.trim() + "\u0027\u0020\u0111\u00e3\u0020\u0074\u1ed3\u006e\u0020\u0074\u1ea1\u0069\u0020\u0074\u0072\u006f\u006e\u0067\u0020\u0068\u1ec7\u0020\u0074\u0068\u1ed1\u006e\u0067\u002e");
-        }
-
-        if (phongBanCha != null && !phongBanCha.trim().isEmpty()) {
-            PhongBan cha = repository.findById(phongBanCha.trim());
-            if (cha == null) {
-                throw new IllegalArgumentException("\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u0020\u006b\u0068\u00f4\u006e\u0067\u0020\u0074\u1ed3\u006e\u0020\u0074\u1ea1\u0069\u002e");
-            }
-            if (!isActiveStatus(cha.getTrangThai())) {
-                throw new IllegalArgumentException("\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u0020\u0027" + cha.getTenPhongBan() + "\u0027\u0020\u0111\u00e3\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e");
-            }
-        }
-
-        String maCha = (phongBanCha != null && !phongBanCha.trim().isEmpty()) ? phongBanCha.trim() : null;
-        PhongBan dept = new PhongBan(maPhongBan.trim(), tenPhongBan.trim(), maCha, "hoatDong");
-        repository.save(dept);
+    public void addDepartment(String ma, String ten, String maCha) {
+        addDepartment(ma, ten, maCha, "");
     }
 
-    public void updateDepartment(String maPhongBan, String tenMoi, String phongBanChaMoi) {
-        PhongBan dept = repository.findById(maPhongBan);
-        if (dept == null) {
-            throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u00ec\u006d\u0020\u0074\u0068\u1ea5\u0079\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u002e");
-        }
-        if (tenMoi == null || tenMoi.trim().isEmpty()) {
-            throw new IllegalArgumentException("\u0054\u00ea\u006e\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u006b\u0068\u00f4\u006e\u0067\u0020\u0111\u01b0\u1ee3\u0063\u0020\u0111\u1ec3\u0020\u0074\u0072\u1ed1\u006e\u0067\u002e");
+    public void addDepartment(String ma, String ten, String maCha, String moTa) {
+        ma  = ma  == null ? "" : ma.trim();
+        ten = ten == null ? "" : ten.trim();
+        maCha = maCha == null ? "" : maCha.trim();
+        moTa = moTa == null ? "" : moTa.trim();
+
+        String loiMa = OrganizationValidation.validateMaPhongBan(ma);
+        if (loiMa != null) throw new IllegalArgumentException(loiMa);
+
+        String loiTen = OrganizationValidation.validateTenPhongBan(ten);
+        if (loiTen != null) throw new IllegalArgumentException(loiTen);
+
+        if (phongBanDAO.existsById(ma))
+            throw new IllegalArgumentException("Ma phong ban '" + ma + "' da ton tai.");
+
+        if (!isEmpty(maCha)) {
+            PhongBan cha = phongBanDAO.findById(maCha);
+            if (cha == null)
+                throw new IllegalArgumentException("Phong ban cha khong ton tai.");
+            if (!dangHoatDong(cha.getTrangThai()))
+                throw new IllegalArgumentException(
+                        "Phong ban cha '" + cha.getTenPhongBan() + "' da ngung hoat dong, khong the them phong ban con.");
         }
 
-        if (phongBanChaMoi != null && !phongBanChaMoi.trim().isEmpty()) {
-            PhongBan cha = repository.findById(phongBanChaMoi.trim());
-            if (cha == null) {
-                throw new IllegalArgumentException("\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u0020\u006b\u0068\u00f4\u006e\u0067\u0020\u0074\u1ed3\u006e\u0020\u0074\u1ea1\u0069\u002e");
-            }
-            if (!isActiveStatus(cha.getTrangThai())) {
-                throw new IllegalArgumentException("\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u0020\u0027" + cha.getTenPhongBan() + "\u0027\u0020\u0111\u00e3\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e");
-            }
-            if (isDescendant(maPhongBan, phongBanChaMoi.trim())) {
-                throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u0068\u1ec3\u0020\u0063\u0068\u1ecdn\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u006f\u006e\u002f\u0063\u0068\u00e1\u0075\u0020\u006c\u00e0\u006d\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u002e\u0020\u0053\u1ebd\u0020\u0074\u1ea1\u006f\u0020\u0076\u00f2\u006e\u0067\u0020\u006c\u1eb7\u0070\u0020\u0074\u0072\u006f\u006e\u0067\u0020\u0063\u00e2\u0079\u0020\u0074\u1ed5\u0020\u0063\u0068\u1ee9\u0063\u002e");
-            }
-        }
-
-        String maCha = (phongBanChaMoi != null && !phongBanChaMoi.trim().isEmpty()) ? phongBanChaMoi.trim() : null;
-        dept.setTenPhongBan(tenMoi.trim());
-        dept.setPhongBanChaId(maCha);
-        repository.update(dept);
+        phongBanDAO.save(new PhongBan(ma, ten, isEmpty(maCha) ? null : maCha, moTa, "hoatDong"));
     }
 
-    public void deactivateDepartment(String maPhongBan) {
-        PhongBan dept = repository.findById(maPhongBan);
-        if (dept == null) {
-            throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u00ec\u006d\u0020\u0074\u0068\u1ea5\u0079\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u002e");
+    public void updateDepartment(String ma, String tenMoi, String chaId, String moTa) {
+        tenMoi = tenMoi == null ? "" : tenMoi.trim();
+        chaId  = chaId  == null ? "" : chaId.trim();
+        moTa   = moTa   == null ? "" : moTa.trim();
+
+        PhongBan pb = phongBanDAO.findById(ma);
+        if (pb == null) throw new IllegalArgumentException("Khong tim thay phong ban.");
+
+        String loiTen = OrganizationValidation.validateTenPhongBan(tenMoi);
+        if (loiTen != null) throw new IllegalArgumentException(loiTen);
+
+        if (!isEmpty(chaId)) {
+            if (chaId.equals(ma))
+                throw new IllegalArgumentException("Phong ban khong the la cha cua chinh no.");
+            PhongBan cha = phongBanDAO.findById(chaId);
+            if (cha == null)
+                throw new IllegalArgumentException("Phong ban cha khong ton tai.");
+            if (!dangHoatDong(cha.getTrangThai()))
+                throw new IllegalArgumentException(
+                        "Phong ban cha '" + cha.getTenPhongBan() + "' da ngung hoat dong.");
+            if (laConChau(ma, chaId))
+                throw new IllegalArgumentException("Khong the chon phong ban con/chau lam cha.");
         }
 
-        List<PhongBan> danhSachCon = repository.findChildren(maPhongBan);
-        for (PhongBan con : danhSachCon) {
-            if (isActiveStatus(con.getTrangThai())) {
-                throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u0068\u1ec3\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e\u0020\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0027" + con.getTenPhongBan() + "\u0027\u0020\u0076\u1eab\u006e\u0020\u0111\u0061\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e\u0020\u0056\u0075\u0069\u0020\u006c\u00f2\u006e\u0067\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0063\u00e1\u0063\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u006f\u006e\u0020\u0074\u0072\u01b0\u1edb\u0063\u002e");
-            }
-        }
-
-        if (boNhiemRepo.hasActiveBoNhiemInDepartment(maPhongBan)) {
-            throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u0068\u1ec3\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e\u0020\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0076\u1eab\u006e\u0020\u0063\u00f2\u006e\u0020\u0062\u1ed5\u0020\u006e\u0068\u0069\u1ec7\u006d\u0020\u0111\u0061\u006e\u0067\u0020\u0068\u0069\u1ec7\u0075\u0020\u006c\u1ef1\u0063\u002e\u0020\u0056\u0075\u0069\u0020\u006c\u00f2\u006e\u0067\u0020\u006b\u1ebf\u0074\u0020\u0074\u0068\u00fa\u0063\u0020\u0063\u00e1\u0063\u0020\u0062\u1ed5\u0020\u006e\u0068\u0069\u1ec7\u006d\u0020\u0074\u0072\u01b0\u1edb\u0063\u002e");
-        }
-
-        dept.setTrangThai("ngung_hoat_dong");
-        repository.update(dept);
+        pb.setTenPhongBan(tenMoi);
+        pb.setPhongBanChaId(isEmpty(chaId) ? null : chaId);
+        pb.setMoTa(moTa);
+        phongBanDAO.update(pb);
     }
 
-    /**
-     * Kich hoat lai phong ban da ngung hoat dong.
-     */
-    public void activateDepartment(String maPhongBan) {
-        PhongBan dept = repository.findById(maPhongBan);
-        if (dept == null) {
-            throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u00ec\u006d\u0020\u0074\u0068\u1ea5\u0079\u0020\u0070\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u002e");
-        }
+    public void deactivateDepartment(String ma) {
+        PhongBan pb = phongBanDAO.findById(ma);
+        if (pb == null) throw new IllegalArgumentException("Khong tim thay phong ban.");
 
-        String maCha = dept.getPhongBanChaId();
-        if (maCha != null && !maCha.trim().isEmpty()) {
-            PhongBan cha = repository.findById(maCha.trim());
-            if (cha != null && !isActiveStatus(cha.getTrangThai())) {
-                throw new IllegalArgumentException("\u004b\u0068\u00f4\u006e\u0067\u0020\u0074\u0068\u1ec3\u0020\u006b\u00ed\u0063\u0068\u0020\u0068\u006f\u1ea1\u0074\u002e\u0020\u0050\u0068\u00f2\u006e\u0067\u0020\u0062\u0061\u006e\u0020\u0063\u0068\u0061\u0020\u0027" + cha.getTenPhongBan() + "\u0027\u0020\u0111\u0061\u006e\u0067\u0020\u006e\u0067\u1eeb\u006e\u0067\u0020\u0068\u006f\u1ea1\u0074\u0020\u0111\u1ed9\u006e\u0067\u002e");
-            }
-        }
+        if (!dangHoatDong(pb.getTrangThai()))
+            throw new IllegalArgumentException("Phong ban nay da ngung hoat dong roi.");
 
-        dept.setTrangThai("hoatDong");
-        repository.update(dept);
+        checkKhongConConHoatDong(ma);
+
+        if (boNhiemDAO.hasActiveBoNhiemInDepartment(ma))
+            throw new IllegalArgumentException("Phong ban con bo nhiem dang hieu luc. Ket thuc bo nhiem truoc.");
+
+        pb.setTrangThai("ngung_hoat_dong");
+        phongBanDAO.update(pb);
     }
 
-    private boolean isActiveStatus(String status) {
-        return "hoatdong".equals(normalizeStatus(status));
+    public void activateDepartment(String ma) {
+        PhongBan pb = phongBanDAO.findById(ma);
+        if (pb == null) throw new IllegalArgumentException("Khong tim thay phong ban.");
+
+        if (dangHoatDong(pb.getTrangThai()))
+            throw new IllegalArgumentException("Phong ban nay dang hoat dong roi.");
+
+        String maCha = pb.getPhongBanChaId();
+        if (!isEmpty(maCha)) {
+            PhongBan cha = phongBanDAO.findById(maCha);
+            if (cha != null && !dangHoatDong(cha.getTrangThai()))
+                throw new IllegalArgumentException(
+                        "Phong ban cha '" + cha.getTenPhongBan() + "' dang ngung. Kich hoat cha truoc.");
+        }
+
+        pb.setTrangThai("hoatDong");
+        phongBanDAO.update(pb);
     }
 
-    private String normalizeStatus(String status) {
-        if (status == null) return "";
-        return status.toLowerCase().replace("_", "").replace(" ", "").replace("-", "");
+    // Dem quy check toan bo cay con/chau/chat
+    private void checkKhongConConHoatDong(String ma) {
+        for (PhongBan con : phongBanDAO.findChildren(ma)) {
+            if (dangHoatDong(con.getTrangThai()))
+                throw new IllegalArgumentException(
+                        "Phong ban con '" + con.getTenPhongBan() + "' van dang hoat dong. Ngung phong ban con truoc.");
+            checkKhongConConHoatDong(con.getId());
+        }
     }
 
-    private boolean isDescendant(String maCha, String maCon) {
-        if (maCon == null) {
-            return false;
-        }
-        if (maCon.equals(maCha)) {
-            return true;
-        }
-        PhongBan con = repository.findById(maCon);
-        if (con == null) {
-            return false;
-        }
-        return isDescendant(maCha, con.getPhongBanChaId());
+    private boolean isEmpty(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private boolean dangHoatDong(String trangThai) {
+        return "hoatDong".equals(trangThai);
+    }
+
+    // De quy leo cay tranh chon con/chau lam cha gay vong lap
+    private boolean laConChau(String maCha, String maCon) {
+        if (maCon == null) return false;
+        if (maCon.equals(maCha)) return true;
+        PhongBan con = phongBanDAO.findById(maCon);
+        if (con == null) return false;
+        return laConChau(maCha, con.getPhongBanChaId());
     }
 }

@@ -77,7 +77,7 @@ public class ChucVuDAO {
      * Kiểm tra mã chức vụ đang hoạt động đã tồn tại chưa (chống tạo trùng).
      */
     public boolean existsActiveByCode(String maChucVu) {
-        String sql = "SELECT COUNT(*) FROM CHUCVU WHERE maChucVu = ? AND trangThai = 'hoat_dong'";
+        String sql = "SELECT COUNT(*) FROM CHUCVU WHERE maChucVu = ? AND trangThai = 'hoatDong'";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, maChucVu);

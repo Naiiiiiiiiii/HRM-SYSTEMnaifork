@@ -3,6 +3,8 @@ package com.hrm.gui.admin;
 import com.hrm.model.PhongBan;
 import com.hrm.bus.PhongBanBUS;
 import com.hrm.util.SessionContext;
+import com.hrm.gui.components.PurpleButton;
+import com.hrm.util.UIColors;
 import com.hrm.util.UIHelper;
 
 import javax.swing.*;
@@ -21,7 +23,8 @@ public class DepartmentPanel extends JPanel {
     private JTextField txtSearch;
     private JComboBox<String> cboFilter;
 
-    private JButton btnThem;
+    private PurpleButton btnThem;
+    private PurpleButton btnSua;
 
     public DepartmentPanel() {
         setLayout(new BorderLayout());
@@ -81,10 +84,15 @@ public class DepartmentPanel extends JPanel {
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // ── THANH NÚT
-        btnThem = UIHelper.createPrimaryButton("+ Thêm");
+        btnThem = new PurpleButton("+ Thêm");
+        btnSua = new PurpleButton("Sửa",
+                UIColors.SUCCESS_GREEN, UIColors.SUCCESS_GREEN.darker(), UIColors.SUCCESS_GREEN.darker());
+
+        btnSua.setEnabled(false);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         btnPanel.add(btnThem);
+        btnPanel.add(btnSua);
         add(btnPanel, BorderLayout.SOUTH);
 
         // ── PHÂN QUYỀN
@@ -92,13 +100,17 @@ public class DepartmentPanel extends JPanel {
 
         // ── SỰ KIỆN
         btnThem.addActionListener(e -> showAddDialog());
+        btnSua.addActionListener(e -> showEditDialog());
 
         txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent e) { applyFilter(); }
         });
 
-        // Lọc theo trạng thái
-        cboFilter.addActionListener(e -> applyFilter());
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                btnSua.setEnabled(table.getSelectedRow() != -1);
+            }
+        });
 
         // Double-click mở dialog chi tiết
         table.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -115,7 +127,9 @@ public class DepartmentPanel extends JPanel {
 
     // ── PHÂN QUYỀN
     private void setupPermissions() {
-        btnThem.setVisible(SessionContext.getInstance().coQuyen("DEPARTMENT_MANAGE"));
+        boolean canManage = SessionContext.getInstance().coQuyen("DEPARTMENT_MANAGE");
+        btnThem.setVisible(canManage);
+        btnSua.setVisible(canManage);
     }
 
     private boolean isRefreshing = false;
@@ -178,6 +192,7 @@ public class DepartmentPanel extends JPanel {
     private void showAddDialog() {
         JTextField txtMa = new JTextField();
         JTextField txtTen = new JTextField();
+        JTextField txtMoTa = new JTextField();
 
         List<PhongBan> dsActive = service.getActiveDepartments();
         JComboBox<String> comboCha = buildParentCombo(dsActive, null);
@@ -185,6 +200,7 @@ public class DepartmentPanel extends JPanel {
         Object[] fields = {
                 "Ma phong ban (*):", txtMa,
                 "Ten phong ban (*):", txtTen,
+                "Mo ta:", txtMoTa,
                 "Phong ban cha:", comboCha
         };
 
@@ -193,7 +209,7 @@ public class DepartmentPanel extends JPanel {
 
         String maCha = getSelectedMa(comboCha, dsActive);
         try {
-            service.addDepartment(txtMa.getText().trim(), txtTen.getText().trim(), maCha);
+            service.addDepartment(txtMa.getText().trim(), txtTen.getText().trim(), maCha, txtMoTa.getText().trim());
             refreshTable();
             JOptionPane.showMessageDialog(this, "Them phong ban thanh cong!");
         } catch (IllegalArgumentException ex) {
@@ -203,9 +219,9 @@ public class DepartmentPanel extends JPanel {
 
     // ── DIALOG CHI TIẾT / SỬA (double-click)
 
-    private void showDetailDialog() {
+    private void showEditDialog() {
         int row = table.getSelectedRow();
-        if (row == -1) return;
+        if (row < 0) { JOptionPane.showMessageDialog(this, "Vui lòng chọn một dòng để sửa."); return; }
         int modelRow = table.convertRowIndexToModel(row);
         String ma = (String) tableModel.getValueAt(modelRow, 0);
         PhongBan dept = service.getById(ma);
@@ -220,6 +236,8 @@ public class DepartmentPanel extends JPanel {
         txtMa.setEnabled(false);
         JTextField txtTen = new JTextField(dept.getTenPhongBan());
         txtTen.setEditable(canEdit);
+        JTextField txtMoTa = new JTextField(dept.getMoTa());
+        txtMoTa.setEditable(canEdit);
 
         List<PhongBan> dsActive = service.getActiveDepartments();
         dsActive.removeIf(d -> d.getId().equals(ma));
@@ -239,13 +257,14 @@ public class DepartmentPanel extends JPanel {
         gbc.insets = new Insets(6, 8, 6, 8);
         gbc.anchor = GridBagConstraints.WEST;
 
-        JComponent[] fields = {txtMa, txtTen, comboCha, cboTrangThai};
+        JComponent[] fields = {txtMa, txtTen, txtMoTa, comboCha, cboTrangThai};
         for (int i = 0; i < fields.length; i++) {
             gbc.gridx = 0; gbc.gridy = i; gbc.fill = GridBagConstraints.NONE; gbc.weightx = 0;
             JLabel lbl = new JLabel(
                     i == 0 ? "Mã phòng ban:" :
                     i == 1 ? "Tên phòng ban (*):" :
-                    i == 2 ? "Phòng ban cha:" : "Trạng thái:");
+                    i == 2 ? "Mô tả:" :
+                    i == 3 ? "Phòng ban cha:" : "Trạng thái:");
             lbl.setFont(com.hrm.util.UIFonts.TEXT_MEDIUM);
             form.add(lbl, gbc);
             gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
@@ -265,9 +284,11 @@ public class DepartmentPanel extends JPanel {
                 String maCha = getSelectedMa(comboCha, dsActive);
                 try {
                     String tenMoi = txtTen.getText().trim();
+                    String moTaMoi = txtMoTa.getText().trim();
                     if (!Objects.equals(tenMoi, dept.getTenPhongBan())
-                            || !Objects.equals(maCha, dept.getPhongBanChaId())) {
-                        service.updateDepartment(ma, tenMoi, maCha);
+                            || !Objects.equals(maCha, dept.getPhongBanChaId())
+                            || !Objects.equals(moTaMoi, dept.getMoTa())) {
+                        service.updateDepartment(ma, tenMoi, maCha, moTaMoi);
                     }
                     String rawTrangThaiMoi = toTrangThaiRaw((String) cboTrangThai.getSelectedItem());
                     if (!normalizeTrangThai(rawTrangThaiMoi).equals(normalizeTrangThai(dept.getTrangThai()))) {
@@ -295,6 +316,27 @@ public class DepartmentPanel extends JPanel {
         dialog.setMinimumSize(new Dimension(400, 230));
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
+    }
+
+    private void showDetailDialog() {
+        int row = table.getSelectedRow();
+        if (row < 0) return;
+        String ma = (String) tableModel.getValueAt(table.convertRowIndexToModel(row), 0);
+        PhongBan dept = service.getById(ma);
+        if (dept == null) return;
+
+        String tenCha = "(Gốc)";
+        if (dept.getPhongBanChaId() != null && !dept.getPhongBanChaId().trim().isEmpty()) {
+            PhongBan cha = service.getById(dept.getPhongBanChaId());
+            tenCha = (cha != null) ? cha.getTenPhongBan() + " (" + cha.getId() + ")" : dept.getPhongBanChaId();
+        }
+
+        JOptionPane.showMessageDialog(this,
+                "Mã:            " + dept.getId() + "\n"
+                + "Tên:           " + dept.getTenPhongBan() + "\n"
+                + "Phòng ban cha: " + tenCha + "\n"
+                + "Trạng thái:    " + toTrangThaiDisplay(dept.getTrangThai()),
+                "Chi tiết phòng ban", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private JComboBox<String> buildParentCombo(List<PhongBan> dsActive, String maChaHienTai) {

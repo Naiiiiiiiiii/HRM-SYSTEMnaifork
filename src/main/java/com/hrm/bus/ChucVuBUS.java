@@ -4,6 +4,7 @@ import com.hrm.dao.ChucVuDAO;
 import com.hrm.dao.LichSuLuongDAO;
 import com.hrm.model.ChucVu;
 import com.hrm.model.LichSuHeSoLuong;
+import com.hrm.util.OrganizationValidation;
 import com.hrm.util.SessionContext;
 
 import java.time.LocalDate;
@@ -11,206 +12,128 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Service quản lý chức vụ.
- * Áp dụng business logic và delegate persistence xuống ChucVuDAO (JDBC).
- * Tự động ghi lịch sử khi hệ số lương hoặc phụ cấp thay đổi.
- */
 public class ChucVuBUS {
 
-    private final ChucVuDAO positionRepo = new ChucVuDAO();
-    private final LichSuLuongDAO historyRepo = LichSuLuongDAO.getInstance();
+    private final ChucVuDAO chucVuDAO = new ChucVuDAO();
+    private final LichSuLuongDAO lichSuDAO = LichSuLuongDAO.getInstance();
 
-    /**
-     * Lấy tất cả chức vụ.
-     */
     public List<ChucVu> getAllPositions() {
-        return positionRepo.findAll();
+        return chucVuDAO.findAll();
     }
 
-    /**
-     * Lấy danh sách chức vụ đang hoạt động.
-     */
     public List<ChucVu> getActivePositions() {
-        return positionRepo.findActive();
+        return chucVuDAO.findActive();
     }
 
-    /**
-     * Lấy danh sách chức vụ được phép tuyển dụng thông thường (capBac >= 3).
-     * Các vị trí cấp cao (Giám đốc, Trưởng phòng) chỉ bổ nhiệm trực tiếp.
-     */
+    // capBac >= 3 moi duoc tuyen dung thong thuong
     public List<ChucVu> getRecruitablePositions() {
         return getActivePositions().stream()
                 .filter(cv -> cv.getCapBac() >= 3)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Tìm chức vụ theo mã.
-     */
-    public ChucVu getById(String maChucVu) {
-        return positionRepo.findById(maChucVu);
+    public ChucVu getById(String ma) {
+        return chucVuDAO.findById(ma);
     }
 
-    /**
-     * Lấy lịch sử thay đổi hệ số lương của một chức vụ.
-     */
-    public List<LichSuHeSoLuong> getHistoryByMaChucVu(String maChucVu) {
-        return historyRepo.findByMaChucVu(maChucVu);
+    public List<LichSuHeSoLuong> getHistoryByMaChucVu(String ma) {
+        return lichSuDAO.findByMaChucVu(ma);
     }
 
-    /**
-     * Thêm chức vụ mới.
-     *
-     * @param maChucVu     mã chức vụ (duy nhất)
-     * @param tenChucVu    tên chức vụ
-     * @param capBac       cấp bậc (1 là cao nhất)
-     * @param heSoLuong    hệ số lương (>0)
-     * @param phuCapChucVu phụ cấp chức vụ (>=0)
-     * @param moTa         mô tả
-     */
-    public void addPosition(String maChucVu, String tenChucVu, int capBac,
-                            double heSoLuong, double phuCapChucVu, String moTa) {
+    public void addPosition(String ma, String ten, int capBac,
+                            double heSo, double phuCap, String moTa) {
+        ma  = ma  == null ? "" : ma.trim();
+        ten = ten == null ? "" : ten.trim();
 
-        if (maChucVu == null || maChucVu.trim().isEmpty()) {
-            throw new IllegalArgumentException("Mã chức vụ không được để trống.");
-        }
+        String loiMa = OrganizationValidation.validateMaChucVu(ma);
+        if (loiMa != null) throw new IllegalArgumentException(loiMa);
 
-        if (tenChucVu == null || tenChucVu.trim().isEmpty()) {
-            throw new IllegalArgumentException("Tên chức vụ không được để trống.");
-        }
+        String loiTen = OrganizationValidation.validateTenChucVu(ten);
+        if (loiTen != null) throw new IllegalArgumentException(loiTen);
 
-        if (positionRepo.existsById(maChucVu.trim())) {
-            throw new IllegalArgumentException("Mã chức vụ '" + maChucVu + "' đã tồn tại.");
-        }
+        String loiCapBac = OrganizationValidation.validateCapBac(capBac);
+        if (loiCapBac != null) throw new IllegalArgumentException(loiCapBac);
 
-        if (heSoLuong <= 0) {
-            throw new IllegalArgumentException("Hệ số lương phải lớn hơn 0.");
-        }
+        if (chucVuDAO.existsById(ma))
+            throw new IllegalArgumentException("Ma chuc vu '" + ma + "' da ton tai.");
 
-        if (phuCapChucVu < 0) {
-            throw new IllegalArgumentException("Phụ cấp không được âm.");
-        }
+        String loiHeSo = OrganizationValidation.validateHeSoLuong(heSo);
+        if (loiHeSo != null) throw new IllegalArgumentException(loiHeSo);
 
-        ChucVu pos = new ChucVu(
-                maChucVu.trim(),
-                tenChucVu.trim(),
-                capBac,
-                heSoLuong,
-                phuCapChucVu,
-                moTa,
-                "hoatdong"
-        );
+        String loiPhuCap = OrganizationValidation.validatePhuCap(phuCap);
+        if (loiPhuCap != null) throw new IllegalArgumentException(loiPhuCap);
 
-        positionRepo.save(pos);
+        chucVuDAO.save(new ChucVu(ma, ten, capBac, heSo, phuCap, moTa, "hoatDong"));
     }
 
-    /**
-     * Cập nhật thông tin chức vụ.
-     * Tự động ghi lịch sử nếu hệ số lương hoặc phụ cấp thay đổi.
-     */
-    public void updatePosition(String maChucVu, String tenMoi, int capBacMoi,
+    // Tu dong ghi lich su neu he so hoac phu cap thay doi
+    public void updatePosition(String ma, String tenMoi, int capBacMoi,
                                double heSoMoi, double phuCapMoi, String moTaMoi) {
+        tenMoi = tenMoi == null ? "" : tenMoi.trim();
 
-        ChucVu pos = positionRepo.findById(maChucVu);
+        ChucVu cv = chucVuDAO.findById(ma);
+        if (cv == null)
+            throw new IllegalArgumentException("Khong tim thay chuc vu.");
 
-        if (pos == null) {
-            throw new IllegalArgumentException("Không tìm thấy chức vụ.");
+        String loiTen = OrganizationValidation.validateTenChucVu(tenMoi);
+        if (loiTen != null) throw new IllegalArgumentException(loiTen);
+
+        String loiCapBac = OrganizationValidation.validateCapBac(capBacMoi);
+        if (loiCapBac != null) throw new IllegalArgumentException(loiCapBac);
+
+        String loiHeSo = OrganizationValidation.validateHeSoLuong(heSoMoi);
+        if (loiHeSo != null) throw new IllegalArgumentException(loiHeSo);
+
+        String loiPhuCap = OrganizationValidation.validatePhuCap(phuCapMoi);
+        if (loiPhuCap != null) throw new IllegalArgumentException(loiPhuCap);
+
+        if (Double.compare(cv.getHeSoLuong(), heSoMoi) != 0
+                || Double.compare(cv.getPhuCapChucVu(), phuCapMoi) != 0) {
+            String ngay = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            lichSuDAO.save(new LichSuHeSoLuong(
+                    lichSuDAO.generateId(), ma,
+                    cv.getHeSoLuong(), heSoMoi,
+                    cv.getPhuCapChucVu(), phuCapMoi,
+                    ngay, getCurrentUserName()));
         }
 
-        if (tenMoi == null || tenMoi.trim().isEmpty()) {
-            throw new IllegalArgumentException("Tên chức vụ không được để trống.");
-        }
-
-        if (heSoMoi <= 0) {
-            throw new IllegalArgumentException("Hệ số lương phải lớn hơn 0.");
-        }
-
-        if (phuCapMoi < 0) {
-            throw new IllegalArgumentException("Phụ cấp không được âm.");
-        }
-
-        boolean heSoThayDoi = Double.compare(pos.getHeSoLuong(), heSoMoi) != 0;
-        boolean phuCapThayDoi = Double.compare(pos.getPhuCapChucVu(), phuCapMoi) != 0;
-
-        if (heSoThayDoi || phuCapThayDoi) {
-
-            String ngayHom = LocalDate.now()
-                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-
-            String nguoiThayDoi = getCurrentUserName();
-
-            LichSuHeSoLuong history = new LichSuHeSoLuong(
-                    historyRepo.generateId(),
-                    maChucVu,
-                    pos.getHeSoLuong(),
-                    heSoMoi,
-                    pos.getPhuCapChucVu(),
-                    phuCapMoi,
-                    ngayHom,
-                    nguoiThayDoi
-            );
-
-            historyRepo.save(history);
-        }
-
-        pos.setTenChucVu(tenMoi.trim());
-        pos.setCapBac(capBacMoi);
-        pos.setHeSoLuong(heSoMoi);
-        pos.setPhuCapChucVu(phuCapMoi);
-        pos.setMoTa(moTaMoi);
-
-        positionRepo.update(pos);
+        cv.setTenChucVu(tenMoi);
+        cv.setCapBac(capBacMoi);
+        cv.setHeSoLuong(heSoMoi);
+        cv.setPhuCapChucVu(phuCapMoi);
+        cv.setMoTa(moTaMoi);
+        chucVuDAO.update(cv);
     }
 
-    /**
-     * Ngừng hoạt động chức vụ.
-     */
-    public void deactivatePosition(String maChucVu) {
+    public void deactivatePosition(String ma) {
+        ChucVu cv = chucVuDAO.findById(ma);
+        if (cv == null) throw new IllegalArgumentException("Khong tim thay chuc vu.");
 
-        ChucVu pos = positionRepo.findById(maChucVu);
+        if ("ngung_hoat_dong".equals(cv.getTrangThai()))
+            throw new IllegalArgumentException("Chuc vu nay da ngung hoat dong roi.");
 
-        if (pos == null) {
-            throw new IllegalArgumentException("Không tìm thấy chức vụ.");
-        }
-
-        pos.setTrangThai("ngung_hoat_dong");
-        positionRepo.update(pos);
+        cv.setTrangThai("ngung_hoat_dong");
+        chucVuDAO.update(cv);
     }
 
-    /**
-     * Kích hoạt lại chức vụ đã ngừng.
-     */
-    public void activatePosition(String maChucVu) {
+    public void activatePosition(String ma) {
+        ChucVu cv = chucVuDAO.findById(ma);
+        if (cv == null) throw new IllegalArgumentException("Khong tim thay chuc vu.");
 
-        ChucVu pos = positionRepo.findById(maChucVu);
+        if ("hoatDong".equals(cv.getTrangThai()))
+            throw new IllegalArgumentException("Chuc vu nay dang hoat dong roi.");
 
-        if (pos == null) {
-            throw new IllegalArgumentException("Không tìm thấy chức vụ.");
-        }
-
-        pos.setTrangThai("hoatdong");
-        positionRepo.update(pos);
+        cv.setTrangThai("hoatDong");
+        chucVuDAO.update(cv);
     }
 
-    /**
-     * Lấy tên người đang đăng nhập để ghi lịch sử.
-     */
     private String getCurrentUserName() {
-
-        SessionContext session = SessionContext.getInstance();
-
-        if (session.isLoggedIn() && session.getCurrentUser() != null) {
-
-            String fullName = session.getCurrentUser().getHoTen();
-
-            if (fullName != null && !fullName.isEmpty()) {
-                return fullName;
-            }
-
-            return session.getCurrentUser().getTenDangNhap();
+        SessionContext s = SessionContext.getInstance();
+        if (s.isLoggedIn() && s.getCurrentUser() != null) {
+            String hoTen = s.getCurrentUser().getHoTen();
+            if (hoTen != null && !hoTen.isEmpty()) return hoTen;
+            return s.getCurrentUser().getTenDangNhap();
         }
-
         return "Admin";
     }
 }

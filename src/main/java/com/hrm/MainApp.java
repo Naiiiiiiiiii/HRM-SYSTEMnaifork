@@ -20,6 +20,6 @@ public class MainApp {
         SwingUtilities.invokeLater(() -> {
             LoginFrame loginFrame = new LoginFrame();
             loginFrame.setVisible(true);
-        });
+        }); 
     }
 }

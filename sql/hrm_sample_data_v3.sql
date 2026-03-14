@@ -186,9 +186,15 @@ INSERT INTO QUYEN (maQuyen, tenQuyen, nhomQuyen) VALUES
 -- VAITRO_QUYEN
 -- =============================================
 
--- ADMIN: toàn quyền — không thay đổi
+-- ADMIN: toàn quyền — liệt kê cụ thể để đảm bảo
+INSERT INTO VAITRO_QUYEN (maVaiTro, maQuyen, phamVi) VALUES
+('ADMIN', 'DEPARTMENT_VIEW',       'ALL'),
+('ADMIN', 'DEPARTMENT_MANAGE',     'ALL'),
+('ADMIN', 'POSITION_VIEW',         'ALL'),
+('ADMIN', 'POSITION_MANAGE',       'ALL');
+-- Và các quyền khác qua SELECT nếu cần
 INSERT IGNORE INTO VAITRO_QUYEN (maVaiTro, maQuyen, phamVi)
-SELECT 'ADMIN', maQuyen, 'ALL' FROM QUYEN;
+SELECT 'ADMIN', maQuyen, 'ALL' FROM QUYEN WHERE maQuyen NOT IN ('DEPARTMENT_VIEW', 'DEPARTMENT_MANAGE', 'POSITION_VIEW', 'POSITION_MANAGE');
 
 -- -----------------------------------------------
 -- NHAN_VIEN: chỉ xem/thao tác dữ liệu bản thân

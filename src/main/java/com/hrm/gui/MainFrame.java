@@ -943,6 +943,19 @@ public class MainFrame extends JFrame {
         setActiveButton(btnOrganization);
         contentPanel.removeAll();
 
+        SessionContext sc = SessionContext.getInstance();
+        boolean canViewDepartment = sc.coQuyen("DEPARTMENT_VIEW");
+        boolean canViewPosition = sc.coQuyen("POSITION_VIEW");
+
+        if (!canViewDepartment && !canViewPosition) {
+            JOptionPane.showMessageDialog(this,
+                    "Ban khong co quyen xem Phong ban/Chuc vu.",
+                    "Khong du quyen",
+                    JOptionPane.WARNING_MESSAGE);
+            showDashboard();
+            return;
+        }
+
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setBackground(UIColors.LIGHT_GRAY_BG);
         wrapperPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -959,13 +972,15 @@ public class MainFrame extends JFrame {
         tabbedPane.setFont(com.hrm.util.UIFonts.TEXT_MEDIUM);
         tabbedPane.setBackground(UIColors.WHITE);
 
-        // Tab 1: Phòng ban
-        DepartmentPanel departmentPanel = new DepartmentPanel();
-        tabbedPane.addTab("Phòng ban", departmentPanel);
+        if (canViewDepartment) {
+            DepartmentPanel departmentPanel = new DepartmentPanel();
+            tabbedPane.addTab("Phòng ban", departmentPanel);
+        }
 
-        // Tab 2: Chức vụ
-        PositionPanel positionPanel = new PositionPanel();
-        tabbedPane.addTab("Chức vụ", positionPanel);
+        if (canViewPosition) {
+            PositionPanel positionPanel = new PositionPanel();
+            tabbedPane.addTab("Chức vụ", positionPanel);
+        }
 
         wrapperPanel.add(tabbedPane, BorderLayout.CENTER);
 
