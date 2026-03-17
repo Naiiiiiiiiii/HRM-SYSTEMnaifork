@@ -2,8 +2,13 @@ package com.hrm.bus;
 
 import com.hrm.dao.BoNhiemDAO;
 import com.hrm.dao.PhongBanDAO;
+import com.hrm.model.DataScope;
 import com.hrm.model.PhongBan;
+import com.hrm.model.TaiKhoan;
+import com.hrm.util.HRMConstants;
 import com.hrm.util.OrganizationValidation;
+import com.hrm.util.PermissionCodes;
+import com.hrm.util.SessionContext;
 
 import java.util.List;
 
@@ -29,6 +34,7 @@ public class PhongBanBUS {
     }
 
     public void addDepartment(String ma, String ten, String maCha, String moTa) {
+        validateManagePermission();
         ma  = ma  == null ? "" : ma.trim();
         ten = ten == null ? "" : ten.trim();
         maCha = maCha == null ? "" : maCha.trim();
@@ -56,6 +62,7 @@ public class PhongBanBUS {
     }
 
     public void updateDepartment(String ma, String tenMoi, String chaId, String moTa) {
+        validateManagePermission();
         tenMoi = tenMoi == null ? "" : tenMoi.trim();
         chaId  = chaId  == null ? "" : chaId.trim();
         moTa   = moTa   == null ? "" : moTa.trim();
@@ -86,6 +93,7 @@ public class PhongBanBUS {
     }
 
     public void deactivateDepartment(String ma) {
+        validateManagePermission();
         PhongBan pb = phongBanDAO.findById(ma);
         if (pb == null) throw new IllegalArgumentException("Khong tim thay phong ban.");
 
@@ -102,6 +110,7 @@ public class PhongBanBUS {
     }
 
     public void activateDepartment(String ma) {
+        validateManagePermission();
         PhongBan pb = phongBanDAO.findById(ma);
         if (pb == null) throw new IllegalArgumentException("Khong tim thay phong ban.");
 
@@ -128,6 +137,20 @@ public class PhongBanBUS {
                         "Phong ban con '" + con.getTenPhongBan() + "' van dang hoat dong. Ngung phong ban con truoc.");
             checkKhongConConHoatDong(con.getId());
         }
+    }
+
+    // Kiem tra quyen quan ly phong ban qua role/quyen load tu DB (khong hardcode ArrayList)
+    private void validateManagePermission() {
+        TaiKhoan currentUser = SessionContext.getInstance().getCurrentUser();
+        if (currentUser == null)
+            throw new IllegalArgumentException("Phien dang nhap khong hop le.");
+        if (HRMConstants.USERNAME_ADMIN.equalsIgnoreCase(currentUser.getTenDangNhap())
+                || currentUser.coVaiTro(HRMConstants.ROLE_ADMIN))
+            return;
+        if (!currentUser.coQuyen(PermissionCodes.DEPARTMENT_MANAGE))
+            throw new IllegalArgumentException("Ban khong co quyen quan ly phong ban.");
+        if (XacThucBUS.getInstance().getScopeForAction(PermissionCodes.DEPARTMENT_MANAGE) != DataScope.ALL)
+            throw new IllegalArgumentException("Quyen quan ly phong ban yeu cau pham vi ALL.");
     }
 
     private boolean isEmpty(String s) {

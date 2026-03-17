@@ -2,8 +2,8 @@ package com.hrm.gui.admin;
 
 import com.hrm.model.ChucVu;
 import com.hrm.model.LichSuHeSoLuong;
-import com.hrm.dao.ChucVuDAO;
 import com.hrm.bus.ChucVuBUS;
+import com.hrm.util.PermissionCodes;
 import com.hrm.util.SessionContext;
 import com.hrm.gui.components.PurpleButton;
 import com.hrm.util.UIColors;
@@ -19,11 +19,11 @@ import java.util.Locale;
 
 public class PositionPanel extends JPanel {
 
-    private ChucVuBUS service = new ChucVuBUS();
+    private final ChucVuBUS service = new ChucVuBUS();
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
-    private NumberFormat moneyFmt = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+    private final NumberFormat moneyFmt = NumberFormat.getNumberInstance(Locale.of("vi", "VN"));
     private JTextField txtSearch;
     private JComboBox<String> cboFilter;
 
@@ -93,7 +93,7 @@ public class PositionPanel extends JPanel {
         btnThem = new PurpleButton("+ Thêm");
         btnSua = new PurpleButton("Sửa",
                 UIColors.SUCCESS_GREEN, UIColors.SUCCESS_GREEN.darker(), UIColors.SUCCESS_GREEN.darker());
-        PurpleButton btnLichSu = new PurpleButton("Xem lịch sử hệ số");
+        PurpleButton btnLichSu = new PurpleButton("Lịch sử thay đổi");
 
         btnSua.setEnabled(false);
         btnLichSu.addActionListener(e -> showHistoryDialog());
@@ -138,7 +138,7 @@ public class PositionPanel extends JPanel {
 
     // ── PHÂN QUYỀN
     private void setupPermissions() {
-        boolean canManage = SessionContext.getInstance().coQuyen("POSITION_MANAGE");
+        boolean canManage = SessionContext.getInstance().coQuyen(PermissionCodes.POSITION_MANAGE);
         btnThem.setVisible(canManage);
         btnSua.setVisible(canManage);
     }
@@ -199,7 +199,7 @@ public class PositionPanel extends JPanel {
         JTextField txtTen = new JTextField();
         JTextField txtCapBac = new JTextField("1");
         JTextField txtHeSo = new JTextField("1.0");
-        JTextField txtPhuCap = new JTextField("0");
+        JTextField txtPhuCap = new JTextField("0.000");
         JTextArea txtMoTa = new JTextArea(3, 20);
         txtMoTa.setLineWrap(true);
 
@@ -222,7 +222,7 @@ public class PositionPanel extends JPanel {
                 return;
             }
             // Kiểm tra trùng mã chức vụ đang hoạt động
-            if (new ChucVuDAO().existsActiveByCode(maChucVu)) {
+            if (service.existsActiveByCode(maChucVu)) {
                 JOptionPane.showMessageDialog(this,
                         "Ma chuc vu '" + maChucVu + "' da ton tai va dang hoat dong. Vui long dung ma khac.",
                         "Trung ma chuc vu", JOptionPane.ERROR_MESSAGE);
@@ -231,7 +231,7 @@ public class PositionPanel extends JPanel {
 
             int capBac = Integer.parseInt(txtCapBac.getText().trim());
             double heSo = Double.parseDouble(txtHeSo.getText().trim());
-            double phuCap = Double.parseDouble(txtPhuCap.getText().trim());
+            double phuCap = parseCurrencyInput(txtPhuCap.getText().trim());
 
             service.addPosition(maChucVu, txtTen.getText().trim(), capBac, heSo, phuCap,
                     txtMoTa.getText().trim());
@@ -255,7 +255,7 @@ public class PositionPanel extends JPanel {
         ChucVu pos = service.getById(ma);
         if (pos == null) return;
 
-        boolean canEdit = SessionContext.getInstance().coQuyen("POSITION_MANAGE");
+        boolean canEdit = SessionContext.getInstance().coQuyen(PermissionCodes.POSITION_MANAGE);
 
         Frame frame = (Frame) SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(frame, "Chi tiết chức vụ - " + pos.getTenChucVu(), true);
@@ -265,7 +265,7 @@ public class PositionPanel extends JPanel {
         JTextField txtTen = new JTextField(pos.getTenChucVu());
         JTextField txtCapBac = new JTextField(String.valueOf(pos.getCapBac()));
         JTextField txtHeSo = new JTextField(String.valueOf(pos.getHeSoLuong()));
-        JTextField txtPhuCap = new JTextField(String.valueOf(pos.getPhuCapChucVu()));
+        JTextField txtPhuCap = new JTextField(moneyFmt.format(pos.getPhuCapChucVu()));
         JTextArea txtMoTa = new JTextArea(pos.getMoTa() != null ? pos.getMoTa() : "", 3, 20);
         txtMoTa.setLineWrap(true);
         JComboBox<String> cboTrangThai = new JComboBox<>(new String[]{
@@ -304,7 +304,7 @@ public class PositionPanel extends JPanel {
         JButton btnHuy = UIHelper.createDefaultButton("Hủy");
         btnHuy.addActionListener(e -> dialog.dispose());
 
-        JButton btnLichSuBtn = UIHelper.createDefaultButton("Xem lịch sử hệ số");
+        JButton btnLichSuBtn = UIHelper.createDefaultButton("Lịch sử thay đổi");
         btnLichSuBtn.addActionListener(e -> showHistoryDialog());
         btnPanel.add(btnLichSuBtn);
         btnPanel.add(btnHuy);
@@ -315,7 +315,7 @@ public class PositionPanel extends JPanel {
                 try {
                     int capBac = Integer.parseInt(txtCapBac.getText().trim());
                     double heSo = Double.parseDouble(txtHeSo.getText().trim());
-                    double phuCap = Double.parseDouble(txtPhuCap.getText().trim());
+                    double phuCap = parseCurrencyInput(txtPhuCap.getText().trim());
                     service.updatePosition(ma, txtTen.getText().trim(), capBac, heSo, phuCap, txtMoTa.getText().trim());
                     String rawTrangThaiMoi = toTrangThaiRaw((String) cboTrangThai.getSelectedItem());
                     if (!normalizeTrangThai(rawTrangThaiMoi).equals(normalizeTrangThai(pos.getTrangThai()))) {
@@ -383,7 +383,7 @@ public class PositionPanel extends JPanel {
         scroll.setPreferredSize(new Dimension(640, 200));
 
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
-                "Lich su he so luong --- " + ten + " (" + ma + ")", true);
+                "Lich su thay doi --- " + ten + " (" + ma + ")", true);
         dialog.setLayout(new BorderLayout());
 
         if (danhSach.isEmpty()) {
@@ -439,13 +439,37 @@ public class PositionPanel extends JPanel {
 
     private String normalizeTrangThai(String value) {
         if (value == null) return "";
-        String v = value.toLowerCase().trim();
-        v = v.replace("áº¡", "a").replace("ạ", "a")
-             .replace("á»™", "o").replace("ộ", "o")
-             .replace("á»«", "u").replace("ừ", "u")
-             .replace("á»", "o").replace("ờ", "o")
-             .replace("Ä‘", "d").replace("đ", "d");
-        v = v.replace("_", "").replace(" ", "").replace("-", "");
-        return v;
+        return value.toLowerCase().trim()
+                .replace("ạ", "a")
+                .replace("ộ", "o")
+                .replace("ừ", "u")
+                .replace("đ", "d")
+                .replace("_", "").replace(" ", "").replace("-", "");
+    }
+
+    // Chap nhan nhap tien theo dinh dang Viet Nam: 1000, 1.000, 1,000
+    private double parseCurrencyInput(String raw) {
+        if (raw == null) return 0;
+        String value = raw.trim();
+        if (value.isEmpty()) return 0;
+
+        // Truong hop 1.000.000 (dau cham la phan tach hang nghin)
+        if (value.matches("^\\d{1,3}(\\.\\d{3})+$")) {
+            value = value.replace(".", "");
+            return Double.parseDouble(value);
+        }
+
+        // Truong hop 1,000,000 (dau phay la phan tach hang nghin)
+        if (value.matches("^\\d{1,3}(,\\d{3})+$")) {
+            value = value.replace(",", "");
+            return Double.parseDouble(value);
+        }
+
+        // Truong hop dung dau phay lam phan thap phan
+        if (value.contains(",") && !value.contains(".")) {
+            value = value.replace(",", ".");
+        }
+
+        return Double.parseDouble(value);
     }
 }

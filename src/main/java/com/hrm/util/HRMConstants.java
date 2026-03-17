@@ -10,6 +10,11 @@ public final class HRMConstants {
     // ── Common ────────────────────────────────────────────────────────────────
     public static final String ALL = "Tất cả";
 
+    // ── Auth & system identities ──────────────────────────────────────────────
+    public static final String ROLE_ADMIN    = "ADMIN";
+    public static final String ROLE_EMPLOYEE = "NHAN_VIEN";
+    public static final String USERNAME_ADMIN = "admin";
+
     // ── Account (TaiKhoan) status ─────────────────────────────────────────────
     public static final String TK_ACTIVE = "Đang hoạt động";
     public static final String TK_LOCKED = "Bị khóa";

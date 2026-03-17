@@ -4,8 +4,12 @@ import com.hrm.dao.ChucVuDAO;
 import com.hrm.dao.LichSuLuongDAO;
 import com.hrm.dao.BoNhiemDAO;
 import com.hrm.model.ChucVu;
+import com.hrm.model.DataScope;
 import com.hrm.model.LichSuHeSoLuong;
+import com.hrm.model.TaiKhoan;
+import com.hrm.util.HRMConstants;
 import com.hrm.util.OrganizationValidation;
+import com.hrm.util.PermissionCodes;
 import com.hrm.util.SessionContext;
 
 import java.time.LocalDate;
@@ -38,12 +42,17 @@ public class ChucVuBUS {
         return chucVuDAO.findById(ma);
     }
 
+    public boolean existsActiveByCode(String maChucVu) {
+        return chucVuDAO.existsActiveByCode(maChucVu);
+    }
+
     public List<LichSuHeSoLuong> getHistoryByMaChucVu(String ma) {
         return lichSuDAO.findByMaChucVu(ma);
     }
 
     public void addPosition(String ma, String ten, int capBac,
                             double heSo, double phuCap, String moTa) {
+        validateManagePermission();
         ma  = ma  == null ? "" : ma.trim();
         ten = ten == null ? "" : ten.trim();
 
@@ -71,6 +80,7 @@ public class ChucVuBUS {
     // Tu dong ghi lich su neu he so hoac phu cap thay doi
     public void updatePosition(String ma, String tenMoi, int capBacMoi,
                                double heSoMoi, double phuCapMoi, String moTaMoi) {
+        validateManagePermission();
         tenMoi = tenMoi == null ? "" : tenMoi.trim();
 
         ChucVu cv = chucVuDAO.findById(ma);
@@ -96,7 +106,7 @@ public class ChucVuBUS {
                     lichSuDAO.generateId(), ma,
                     cv.getHeSoLuong(), heSoMoi,
                     cv.getPhuCapChucVu(), phuCapMoi,
-                    ngay, getCurrentUserName()));
+                ngay, getCurrentUserId()));
         }
 
         cv.setTenChucVu(tenMoi);
@@ -108,6 +118,7 @@ public class ChucVuBUS {
     }
 
     public void deactivatePosition(String ma) {
+        validateManagePermission();
         ChucVu cv = chucVuDAO.findById(ma);
         if (cv == null) throw new IllegalArgumentException("Khong tim thay chuc vu.");
 
@@ -122,6 +133,7 @@ public class ChucVuBUS {
     }
 
     public void activatePosition(String ma) {
+        validateManagePermission();
         ChucVu cv = chucVuDAO.findById(ma);
         if (cv == null) throw new IllegalArgumentException("Khong tim thay chuc vu.");
 
@@ -132,13 +144,25 @@ public class ChucVuBUS {
         chucVuDAO.update(cv);
     }
 
-    private String getCurrentUserName() {
+    // Kiem tra quyen quan ly chuc vu qua role/quyen load tu DB (khong hardcode ArrayList)
+    private void validateManagePermission() {
+        TaiKhoan currentUser = SessionContext.getInstance().getCurrentUser();
+        if (currentUser == null)
+            throw new IllegalArgumentException("Phien dang nhap khong hop le.");
+        if (HRMConstants.USERNAME_ADMIN.equalsIgnoreCase(currentUser.getTenDangNhap())
+                || currentUser.coVaiTro(HRMConstants.ROLE_ADMIN))
+            return;
+        if (!currentUser.coQuyen(PermissionCodes.POSITION_MANAGE))
+            throw new IllegalArgumentException("Ban khong co quyen quan ly chuc vu.");
+        if (XacThucBUS.getInstance().getScopeForAction(PermissionCodes.POSITION_MANAGE) != DataScope.ALL)
+            throw new IllegalArgumentException("Quyen quan ly chuc vu yeu cau pham vi ALL.");
+    }
+
+    private String getCurrentUserId() {
         SessionContext s = SessionContext.getInstance();
         if (s.isLoggedIn() && s.getCurrentUser() != null) {
-            String hoTen = s.getCurrentUser().getHoTen();
-            if (hoTen != null && !hoTen.isEmpty()) return hoTen;
-            return s.getCurrentUser().getTenDangNhap();
+            return String.valueOf(s.getCurrentUser().getId());
         }
-        return "Admin";
+        return null;
     }
 }

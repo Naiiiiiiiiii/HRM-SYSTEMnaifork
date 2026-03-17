@@ -2,6 +2,7 @@ package com.hrm.gui.admin;
 
 import com.hrm.model.PhongBan;
 import com.hrm.bus.PhongBanBUS;
+import com.hrm.util.PermissionCodes;
 import com.hrm.util.SessionContext;
 import com.hrm.gui.components.PurpleButton;
 import com.hrm.util.UIColors;
@@ -16,7 +17,7 @@ import java.util.Objects;
 
 public class DepartmentPanel extends JPanel {
 
-    private PhongBanBUS service = new PhongBanBUS();
+    private final PhongBanBUS service = new PhongBanBUS();
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
@@ -127,7 +128,7 @@ public class DepartmentPanel extends JPanel {
 
     // ── PHÂN QUYỀN
     private void setupPermissions() {
-        boolean canManage = SessionContext.getInstance().coQuyen("DEPARTMENT_MANAGE");
+        boolean canManage = SessionContext.getInstance().coQuyen(PermissionCodes.DEPARTMENT_MANAGE);
         btnThem.setVisible(canManage);
         btnSua.setVisible(canManage);
     }
@@ -227,7 +228,7 @@ public class DepartmentPanel extends JPanel {
         PhongBan dept = service.getById(ma);
         if (dept == null) return;
 
-        boolean canEdit = SessionContext.getInstance().coQuyen("DEPARTMENT_MANAGE");
+        boolean canEdit = SessionContext.getInstance().coQuyen(PermissionCodes.DEPARTMENT_MANAGE);
 
         Frame frame = (Frame) SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(frame, "Chi tiết phòng ban - " + dept.getTenPhongBan(), true);
@@ -385,13 +386,11 @@ public class DepartmentPanel extends JPanel {
 
     private String normalizeTrangThai(String value) {
         if (value == null) return "";
-        String v = value.toLowerCase().trim();
-        v = v.replace("áº¡", "a").replace("ạ", "a")
-             .replace("á»™", "o").replace("ộ", "o")
-             .replace("á»«", "u").replace("ừ", "u")
-             .replace("á»", "o").replace("ờ", "o")
-             .replace("Ä‘", "d").replace("đ", "d");
-        v = v.replace("_", "").replace(" ", "").replace("-", "");
-        return v;
+        return value.toLowerCase().trim()
+                .replace("ạ", "a")
+                .replace("ộ", "o")
+                .replace("ừ", "u")
+                .replace("đ", "d")
+                .replace("_", "").replace(" ", "").replace("-", "");
     }
 }

@@ -158,35 +158,6 @@ public class PhongBanDAO {
         }
     }
 
-    /**
-     * Kiểm tra phòng ban có bổ nhiệm đang hoạt động không.
-     * Tạm thời trả về false vì module BoNhiem chưa được tích hợp ở đây.
-     */
-    public boolean hasActiveAppointments(String maPhongBan) {
-        return false;
-    }
-
-    /**
-     * Kiểm tra phòng ban có phòng ban con đang hoạt động không.
-     */
-    public boolean hasActiveChildren(String maPhongBan) {
-        String sql = "SELECT 1 FROM PHONGBAN "
-                + "WHERE phongBanCha = ? "
-                + "AND trangThai = 'hoatDong' "
-                + "LIMIT 1";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, maPhongBan);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi PhongBanDAO.hasActiveChildren: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return false;
-    }
-
     // ==================== Private Helpers ================================
 
     private PhongBan mapRow(ResultSet rs) throws SQLException {

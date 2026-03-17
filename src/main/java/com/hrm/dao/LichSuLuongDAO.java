@@ -40,8 +40,8 @@ public class LichSuLuongDAO {
      */
     public int insert(LichSuHeSoLuong h) {
         String sql = "INSERT INTO LICHSU_HESOLUONG "
-                + "(maChucVu, heSoLuongCu, heSoLuongMoi, phuCapCu, phuCapMoi, ngayThayDoi) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+            + "(maChucVu, heSoLuongCu, heSoLuongMoi, phuCapCu, phuCapMoi, ngayThayDoi, nguoiThayDoi) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -57,6 +57,17 @@ public class LichSuLuongDAO {
                 ps.setDate(6, sqlDate);
             } else {
                 ps.setNull(6, Types.DATE);
+            }
+
+            // DB schema: nguoiThayDoi là INT (maTaiKhoan)
+            if (h.getNguoiThayDoi() != null && !h.getNguoiThayDoi().isEmpty()) {
+                try {
+                    ps.setInt(7, Integer.parseInt(h.getNguoiThayDoi()));
+                } catch (NumberFormatException ex) {
+                    ps.setNull(7, Types.INTEGER);
+                }
+            } else {
+                ps.setNull(7, Types.INTEGER);
             }
 
             ps.executeUpdate();
@@ -80,9 +91,13 @@ public class LichSuLuongDAO {
      */
     public List<LichSuHeSoLuong> findAll() {
         List<LichSuHeSoLuong> list = new ArrayList<>();
-        String sql = "SELECT maLichSu, maChucVu, heSoLuongCu, heSoLuongMoi, "
-                + "phuCapCu, phuCapMoi, ngayThayDoi "
-                + "FROM LICHSU_HESOLUONG ORDER BY ngayThayDoi DESC, maLichSu DESC";
+        String sql = "SELECT ls.maLichSu, ls.maChucVu, ls.heSoLuongCu, ls.heSoLuongMoi, "
+            + "ls.phuCapCu, ls.phuCapMoi, ls.ngayThayDoi, "
+            + "COALESCE(tt.hoTen, tk.tenDangNhap, '') AS nguoiThayDoiTen "
+            + "FROM LICHSU_HESOLUONG ls "
+            + "LEFT JOIN TAIKHOAN tk ON ls.nguoiThayDoi = tk.maTaiKhoan "
+            + "LEFT JOIN THONGTINCANHAN tt ON tk.maNV = tt.maNV "
+            + "ORDER BY ls.ngayThayDoi DESC, ls.maLichSu DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -104,10 +119,14 @@ public class LichSuLuongDAO {
      */
     public List<LichSuHeSoLuong> findByMaChucVu(String maChucVu) {
         List<LichSuHeSoLuong> list = new ArrayList<>();
-        String sql = "SELECT maLichSu, maChucVu, heSoLuongCu, heSoLuongMoi, "
-                + "phuCapCu, phuCapMoi, ngayThayDoi "
-                + "FROM LICHSU_HESOLUONG WHERE maChucVu = ? "
-                + "ORDER BY ngayThayDoi DESC, maLichSu DESC";
+        String sql = "SELECT ls.maLichSu, ls.maChucVu, ls.heSoLuongCu, ls.heSoLuongMoi, "
+            + "ls.phuCapCu, ls.phuCapMoi, ls.ngayThayDoi, "
+            + "COALESCE(tt.hoTen, tk.tenDangNhap, '') AS nguoiThayDoiTen "
+            + "FROM LICHSU_HESOLUONG ls "
+            + "LEFT JOIN TAIKHOAN tk ON ls.nguoiThayDoi = tk.maTaiKhoan "
+            + "LEFT JOIN THONGTINCANHAN tt ON tk.maNV = tt.maNV "
+            + "WHERE ls.maChucVu = ? "
+            + "ORDER BY ls.ngayThayDoi DESC, ls.maLichSu DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, maChucVu);
@@ -166,9 +185,8 @@ public class LichSuLuongDAO {
             ngayThayDoi = sdf.format(ts);
         }
 
-        // nguoiThayDoi: cột DB là INT (FK sang NHANVIEN), model dùng String tên.
-        // Trả về chuỗi rỗng vì thông tin này không được lưu khi insert từ ứng dụng.
-        String nguoiThayDoi = "";
+        String nguoiThayDoi = rs.getString("nguoiThayDoiTen");
+        if (nguoiThayDoi == null) nguoiThayDoi = "";
 
         return new LichSuHeSoLuong(id, maChucVu, heSoLuongCu, heSoLuongMoi,
                 phuCapCu, phuCapMoi, ngayThayDoi, nguoiThayDoi);
